@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <title>Resume Analyzer</title>
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #4cc9f0;
+            --error-color: #f72585;
+            --text-color: #2b2d42;
+            --light-gray: #edf2f4;
+            --dark-gray: #8d99ae;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f9fafb;
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+            border-bottom: 2px solid var(--light-gray);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .app-description {
+            color: var(--dark-gray);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+
+        .upload-section {
+            flex: 1;
+            min-width: 300px;
+            background-color: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-section {
+            flex: 2;
+            min-width: 400px;
+            background-color: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: var(--secondary-color);
+            border-bottom: 1px solid var(--light-gray);
+            padding-bottom: 10px;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--dark-gray);
+            border-radius: 5px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--primary-color);
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: var(--dark-gray);
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .btn:disabled {
+            background-color: var(--dark-gray);
+            cursor: not-allowed;
+        }
+
+        .custom-prompt {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--dark-gray);
+            border-radius: 5px;
+            margin-bottom: 15px;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .file-info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: var(--light-gray);
+            border-radius: 5px;
+            display: none;
+        }
+
+        .file-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .file-pages {
+            color: var(--dark-gray);
+        }
+
+        .analysis-result {
+            white-space: normal; /* Change from pre-line to normal */
+            padding: 20px;
+            background-color: var(--light-gray);
+            border-radius: 5px;
+            max-height: 600px;
+            overflow-y: auto;
+            display: none;
+        }
+        /* Style markdown elements */
+        .analysis-result h1,
+        .analysis-result h2,
+        .analysis-result h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: var(--secondary-color);
+        }
+
+        .analysis-result ul,
+        .analysis-result ol {
+            padding-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .analysis-result li {
+            margin-bottom: 0.5em;
+        }
+
+        .analysis-result p {
+            margin-bottom: 1em;
+        }
+
+        .analysis-result code {
+            background-color: #f0f0f0;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .analysis-result blockquote {
+            border-left: 4px solid var(--dark-gray);
+            padding-left: 1em;
+            margin-left: 0;
+            color: var(--dark-gray);
+        }
+
+        .analysis-result table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 1em;
+        }
+
+        .analysis-result th,
+        .analysis-result td {
+            border: 1px solid var(--dark-gray);
+            padding: 8px;
+            text-align: left;
+        }
+
+        .analysis-result th {
+            background-color: var(--light-gray);
+        }
+
+        .loading {
+            text-align: center;
+            display: none;
+            margin: 20px 0;
+        }
+
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: var(--primary-color);
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-message {
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .success {
+            background-color: rgba(76, 201, 240, 0.2);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+
+        .error {
+            background-color: rgba(247, 37, 133, 0.2);
+            color: var(--error-color);
+            border: 1px solid var(--error-color);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--dark-gray);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Resume Roaster by Lucknow AI Labs</h1>
+            <p class="app-description">Upload your resume and get detailed AI-powered feedback to improve your chances of landing your dream job in Bhojpuri.</p>
+        </header>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <h2>Upload Resume</h2>
+
+                <div class="upload-area" id="upload-area">
+                    <div class="upload-icon">📄</div>
+                    <p class="upload-text">Drag & drop your resume PDF here</p>
+                    <p>or</p>
+                    <button type="button" class="btn" id="select-file-btn">Select PDF File</button>
+                    <input type="file" class="file-input" id="file-input" accept=".pdf">
+                </div>
+
+                <div class="file-info" id="file-info">
+                    <p class="file-name" id="file-name"></p>
+                    <p class="file-pages" id="file-pages"></p>
+                </div>
+
+                <div class="status-message" id="status-message"></div>
+
+                <button type="button" class="btn" id="analyze-btn" disabled>Analyze Resume</button>
+
+                <div class="loading" id="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Processing your resume...</p>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <h2>Analysis Results</h2>
+                <div class="no-results" id="no-results">
+                    <p>Upload and analyze your resume to see results</p>
+                </div>
+                <div class="analysis-result" id="analysis-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let sessionId = null;
+        let fileUploaded = false;
+        const apiUrl = 'http://localhost:8000'; // Change this to your API URL
+
+        // DOM Elements
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const selectFileBtn = document.getElementById('select-file-btn');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const customPrompt = document.getElementById('custom-prompt');
+        const fileInfo = document.getElementById('file-info');
+        const fileName = document.getElementById('file-name');
+        const filePages = document.getElementById('file-pages');
+        const statusMessage = document.getElementById('status-message');
+        const loading = document.getElementById('loading');
+        const analysisResult = document.getElementById('analysis-result');
+        const noResults = document.getElementById('no-results');
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', initApp);
+
+        // Fixed event listener for Select PDF button
+        selectFileBtn.addEventListener('click', function() {
+            console.log('Select file button clicked');
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', function(e) {
+            console.log('File input changed', e.target.files);
+            handleFileSelect(e);
+        });
+
+        analyzeBtn.addEventListener('click', analyzeResume);
+
+        // Make the entire upload area clickable to select files
+        uploadArea.addEventListener('click', function(e) {
+            // Only trigger file selection if the click wasn't on the button
+            // (prevents double triggering)
+            if (e.target !== selectFileBtn && !selectFileBtn.contains(e.target)) {
+                fileInput.click();
+            }
+        });
+
+        // Drag and Drop handlers
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.remove('dragover');
+
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Initialize the app
+        function initApp() {
+            console.log('App initialized');
+            // Create or retrieve session
+            getSession();
+        }
+
+        // Show status message
+        function showStatusMessage(message, type) {
+            if (!message) {
+                statusMessage.style.display = 'none';
+                return;
+            }
+
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message';
+
+            if (type) {
+                statusMessage.classList.add(type);
+            }
+
+            statusMessage.style.display = 'block';
+        }
+
+        // Show analysis results
+        function showAnalysisResults(results) {
+            noResults.style.display = 'none';
+            analysisResult.innerHTML = marked.parse(results);
+            analysisResult.style.display = 'block';
+        }
+
+        // Get or create session
+        async function getSession() {
+            try {
+                const response = await fetch(`${apiUrl}/session`, {
+                    method: 'GET',
+                    headers: sessionId ? { 'session-id': sessionId } : {}
+                });
+
+                const data = await response.json();
+                sessionId = data.session_id;
+
+                console.log('Session data:', data);
+
+                // If session already has a resume
+                if (data.has_resume) {
+                    fileUploaded = true;
+                    analyzeBtn.disabled = false;
+                    fileInfo.style.display = 'block';
+                    filePages.textContent = `Pages: ${data.pages}`;
+                    fileName.textContent = 'Resume uploaded';
+
+                    // If session already has analysis
+                    if (data.has_analysis) {
+                        getAnalysisResults();
+                    }
+                }
+
+                console.log('Session initialized:', sessionId);
+            } catch (error) {
+                showStatusMessage('Error initializing session. Please refresh the page.', 'error');
+                console.error('Session error:', error);
+            }
+        }
+
+        // Handle file selection
+        function handleFileSelect(e) {
+            console.log('File selection triggered');
+            if (e.target.files && e.target.files.length > 0) {
+                console.log('File selected:', e.target.files[0].name);
+                handleFile(e.target.files[0]);
+            } else {
+                console.log('No files selected');
+            }
+        }
+
+        // Process selected file
+        function handleFile(file) {
+            console.log('Handling file:', file.name);
+            // Check if file is PDF
+            if (file.type !== 'application/pdf') {
+                showStatusMessage('Please select a PDF file', 'error');
+                return;
+            }
+
+            // Show file info
+            fileName.textContent = file.name;
+            fileInfo.style.display = 'block';
+            filePages.textContent = 'Uploading...';
+
+            // Upload file
+            uploadFile(file);
+        }
+
+        // Upload file to server
+        async function uploadFile(file) {
+            showStatusMessage('', '');
+            loading.style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                console.log('Uploading file to', `${apiUrl}/upload`);
+                console.log('Session ID:', sessionId);
+
+                const response = await fetch(`${apiUrl}/upload`, {
+                    method: 'POST',
+                    headers: sessionId ? { 'session-id': sessionId } : {},
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Server error:', errorText);
+                    throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                fileUploaded = true;
+                filePages.textContent = `Pages: ${data.pages}`;
+                analyzeBtn.disabled = false;
+
+                showStatusMessage('Resume uploaded successfully!', 'success');
+                console.log('Upload successful:', data)
+                    console.log('Upload successful:', data);
+
+                // Update session ID if it was created during upload
+                if (data.session_id) {
+                    sessionId = data.session_id;
+                }
+            } catch (error) {
+                showStatusMessage(`Error uploading file: ${error.message}`, 'error');
+                console.error('Upload error:', error);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Analyze the uploaded resume
+async function analyzeResume() {
+    if (!fileUploaded) {
+        showStatusMessage('Please upload a resume first', 'error');
+        return;
+    }
+
+    showStatusMessage('', '');
+    loading.style.display = 'block';
+    analyzeBtn.disabled = true;
+    noResults.style.display = 'none';
+
+    try {
+        const url = `${apiUrl}/analyze`;
+
+        console.log('Sending analysis request to:', url);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'session-id': sessionId,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Server error:', errorText);
+            throw new Error(`Analysis failed: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        showAnalysisResults(data.analysis);
+        showStatusMessage('Analysis completed!', 'success');
+        console.log('Analysis successful:', data);
+    } catch (error) {
+        showStatusMessage(`Error analyzing resume: ${error.message}`, 'error');
+        console.error('Analysis error:', error);
+    } finally {
+        loading.style.display = 'none';
+        analyzeBtn.disabled = false;
+    }
+}
+        // Get analysis results for existing session
+        async function getAnalysisResults() {
+            try {
+                const analysisResponse = await fetch(`${apiUrl}/analyze`, {
+                    method: 'POST',
+                    headers: { 'session-id': sessionId }
+                });
+
+                if (!analysisResponse.ok) {
+                    throw new Error('Failed to retrieve analysis');
+                }
+
+                const data = await analysisResponse.json();
+                showAnalysisResults(data.analysis);
+            } catch (error) {
+                console.error('Error getting analysis results:', error);
+            }
+        }
+    </script>
+</body>
+</html>
