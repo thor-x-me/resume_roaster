@@ -31,7 +31,7 @@ A FastAPI application for analyzing resumes using Google's Gemini vision models.
 1. Clone the repository:
    ```
    git clone <paste_repository_URL>
-   cd resume-analyzer-api
+   cd resume_roaster
    ```
 
 2. Create a virtual environment:
